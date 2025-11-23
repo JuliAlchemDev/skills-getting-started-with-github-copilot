@@ -23,6 +23,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Clear loading message
       activitiesList.innerHTML = "";
+      // Reset activity select (keep placeholder)
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -68,6 +70,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
             li.appendChild(avatar);
             li.appendChild(emailSpan);
+
+            // Delete button (unregister)
+            const del = document.createElement("button");
+            del.className = "delete-btn";
+            del.setAttribute("aria-label", `Unregister ${p} from ${name}`);
+            del.dataset.activity = name;
+            del.dataset.email = p;
+            del.textContent = "🗑️";
+            li.appendChild(del);
+
             ul.appendChild(li);
           });
         }
@@ -126,4 +138,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize app
   fetchActivities();
+
+  // Delegate click handler for unregister/delete buttons
+  activitiesList.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".delete-btn");
+    if (!btn) return;
+
+    const activity = btn.dataset.activity;
+    const email = btn.dataset.email;
+
+    if (!activity || !email) return;
+
+    const confirmRemove = confirm(`Unregister ${email} from ${activity}?`);
+    if (!confirmRemove) return;
+
+    try {
+      const resp = await fetch(`/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`, {
+        method: "POST",
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        alert(err.detail || "Failed to unregister participant");
+        return;
+      }
+
+      // Refresh activities to show updated state
+      fetchActivities();
+    } catch (error) {
+      console.error("Error unregistering participant:", error);
+      alert("Failed to unregister participant. Please try again.");
+    }
+  });
 });
